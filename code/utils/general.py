@@ -6,10 +6,10 @@ import torch.nn.functional as F
 import time
 from torchvision import transforms
 import numpy as np
+from pathlib import Path
 
 def mkdir_ifnotexists(directory):
-    if not os.path.exists(directory):
-        os.mkdir(directory)
+    Path(directory).mkdir(parents=True, exist_ok=True)
 
 def get_class(kls):
     parts = kls.split('.')
