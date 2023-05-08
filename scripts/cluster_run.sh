@@ -21,11 +21,12 @@ cd /home/yuqunwu2/large_scale_nerf/monosdf/code
 python training/exp_runner.py --scan_id ${scene} \
                               --full ${with_full} \
                               --expname ${scene} \
-                              --data_root ${MOUNT_DIR}
+                              --data_root ${MOUNT_DIR} \
+                              --exps_folder ${run_name}
 
 
-python evaluation/generate_img_mesh.py --checkpoint "${MOUNT_DIR}/'monosdf_eth3d'/${scene}/checkpoints/ModelParameters/latest.pth" \
-                                       --evals_folder "${MOUNT_DIR}/'monosdf_eth3d'/${scene}/output" \
+python evaluation/generate_img_mesh.py --checkpoint "${MOUNT_DIR}/${run_name}/${scene}/checkpoints/ModelParameters/latest.pth" \
+                                       --evals_folder "${MOUNT_DIR}/${run_name}/${scene}/output" \
                                        --scan_id ${scene} \
                                        --data_root ${MOUNT_DIR}
 

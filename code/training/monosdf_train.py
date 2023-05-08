@@ -85,6 +85,7 @@ class MonoSDFTrainRunner():
             dataset_conf['scan_id'] = kwargs['scan_id']
         dataset_conf['full'] = kwargs['full']
         dataset_conf['data_root'] = kwargs['data_root']
+        print(dataset_conf)
 
         self.train_dataset = utils.get_class(self.conf.get_string('train.dataset_class'))(**dataset_conf)
 
