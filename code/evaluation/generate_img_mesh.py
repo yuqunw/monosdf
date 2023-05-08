@@ -9,6 +9,7 @@ from PIL import Image
 from tqdm import tqdm
 import pandas as pd
 import open3d as o3d
+import json
 import multiprocessing as mp
 
 import utils.general as utils
@@ -33,34 +34,37 @@ def generate_pc_from_mesh(scan_id, mesh_path, pc_path, thresh):
     pbar.set_description('read data mesh')
     data_mesh = o3d.io.read_triangle_mesh(mesh_path)
 
-    vertices = np.asarray(data_mesh.vertices)
-    triangles = np.asarray(data_mesh.triangles)
-    tri_vert = vertices[triangles]
+    sampled_pc = data_mesh.sample_points_poisson_disk(number_of_points = 2000000, )
+    o3d.io.write_point_cloud(pc_path, sampled_pc)
 
-    # pbar.update(1)
-    # pbar.set_description('sample pcd from mesh')
-    v1 = tri_vert[:,1] - tri_vert[:,0]
-    v2 = tri_vert[:,2] - tri_vert[:,0]
-    l1 = np.linalg.norm(v1, axis=-1, keepdims=True)
-    l2 = np.linalg.norm(v2, axis=-1, keepdims=True)
-    area2 = np.linalg.norm(np.cross(v1, v2), axis=-1, keepdims=True)
-    non_zero_area = (area2 > 0)[:,0]
-    l1, l2, area2, v1, v2, tri_vert = [
-        arr[non_zero_area] for arr in [l1, l2, area2, v1, v2, tri_vert]
-    ]
-    thr = thresh * np.sqrt(l1 * l2 / area2)
-    n1 = np.floor(l1 / thr)
-    n2 = np.floor(l2 / thr)
+    # vertices = np.asarray(data_mesh.vertices)
+    # triangles = np.asarray(data_mesh.triangles)
+    # tri_vert = vertices[triangles]
 
-    with mp.Pool() as mp_pool:
-        new_pts = mp_pool.map(sample_single_tri, ((n1[i,0], n2[i,0], v1[i:i+1], v2[i:i+1], tri_vert[i:i+1,0]) for i in range(len(n1))), chunksize=1024)
+    # # pbar.update(1)
+    # # pbar.set_description('sample pcd from mesh')
+    # v1 = tri_vert[:,1] - tri_vert[:,0]
+    # v2 = tri_vert[:,2] - tri_vert[:,0]
+    # l1 = np.linalg.norm(v1, axis=-1, keepdims=True)
+    # l2 = np.linalg.norm(v2, axis=-1, keepdims=True)
+    # area2 = np.linalg.norm(np.cross(v1, v2), axis=-1, keepdims=True)
+    # non_zero_area = (area2 > 0)[:,0]
+    # l1, l2, area2, v1, v2, tri_vert = [
+    #     arr[non_zero_area] for arr in [l1, l2, area2, v1, v2, tri_vert]
+    # ]
+    # thr = thresh * np.sqrt(l1 * l2 / area2)
+    # n1 = np.floor(l1 / thr)
+    # n2 = np.floor(l2 / thr)
 
-    new_pts = np.concatenate(new_pts, axis=0)
-    data_pcd = np.concatenate([vertices, new_pts], axis=0)
+    # with mp.Pool() as mp_pool:
+    #     new_pts = mp_pool.map(sample_single_tri, ((n1[i,0], n2[i,0], v1[i:i+1], v2[i:i+1], tri_vert[i:i+1,0]) for i in range(len(n1))), chunksize=1024)
 
-    point_cloud = o3d.geometry.PointCloud()
-    point_cloud.points = o3d.utility.Vector3dVector(data_pcd)
-    o3d.io.write_point_cloud(pc_path, point_cloud)
+    # new_pts = np.concatenate(new_pts, axis=0)
+    # data_pcd = np.concatenate([vertices, new_pts], axis=0)
+
+    # point_cloud = o3d.geometry.PointCloud()
+    # point_cloud.points = o3d.utility.Vector3dVector(data_pcd)
+    # o3d.io.write_point_cloud(pc_path, point_cloud)
 
 def evaluate(**kwargs):
     torch.set_default_dtype(torch.float32)
@@ -129,6 +133,24 @@ def evaluate(**kwargs):
 
             utils.mkdir_ifnotexists(results_folder_name)
             mesh_path = '{0}/{1}_mesh.ply'.format(results_folder_name, scan_id)
+
+            instance_dir = os.path.join('../data/eth3d', f'{scan_id}')
+            # Transform to world coordWinates
+            # First load true scale matrix
+            transform_path = os.path.join(instance_dir, 'transforms.json')
+            with open(transform_path, 'r') as f:
+                transforms = json.load(f)
+            center = torch.Tensor(transforms['pose_offset']).view(3)
+            scale = transforms['pose_scale']      
+            true_scale_mat = np.eye(4).astype(np.float32)
+            true_scale_mat[:3, 3] = -center
+            true_scale_mat[:3 ] /= scale 
+
+            # Get the inverse of the true scale matrix, following monosdf definition
+            inv_true_scale_mat = np.linalg.inv(true_scale_mat)
+
+            # Apply the inverse of the true scale matrix to the mesh
+            mesh.apply_transform(inv_true_scale_mat)
             mesh.export(mesh_path, 'ply')
 
         # Cull point cloud from mesh
@@ -170,7 +192,6 @@ def evaluate(**kwargs):
             model_outputs = utils.merge_output(res, total_pixels, batch_size)
             rgb_eval = model_outputs['rgb_values']
             rgb_eval = rgb_eval.reshape(batch_size, total_pixels, 3)
-
 
             rgb_eval = plt.lin2img(rgb_eval, img_res).detach().cpu().numpy()[0]
             rgb_eval = rgb_eval.transpose(1, 2, 0)
