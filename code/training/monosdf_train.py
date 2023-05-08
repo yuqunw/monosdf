@@ -28,14 +28,15 @@ class MonoSDFTrainRunner():
         self.exps_folder_name = kwargs['exps_folder_name']
         self.GPU_INDEX = kwargs['gpu_index']
 
+        self.data_root = kwargs['data_root']
         self.expname = self.conf.get_string('train.expname') + kwargs['expname']
         scan_id = kwargs['scan_id'] if kwargs['scan_id'] is not None else self.conf.get_int('dataset.scan_id', default=-1)
         if scan_id != -1:
             self.expname = self.expname + '_{0}'.format(scan_id)
 
         if kwargs['is_continue'] and kwargs['timestamp'] == 'latest':
-            if os.path.exists(os.path.join('../',kwargs['exps_folder_name'],self.expname)):
-                timestamps = os.listdir(os.path.join('../',kwargs['exps_folder_name'],self.expname))
+            if os.path.exists(os.path.join(self.data_root, kwargs['exps_folder_name'], self.expname)):
+                timestamps = os.listdir(os.path.join('../../',kwargs['exps_folder_name'],self.expname))
                 if (len(timestamps)) == 0:
                     is_continue = False
                     timestamp = None
@@ -50,8 +51,8 @@ class MonoSDFTrainRunner():
             is_continue = kwargs['is_continue']
 
         if self.GPU_INDEX == 0:
-            utils.mkdir_ifnotexists(os.path.join('../',self.exps_folder_name))
-            self.expdir = os.path.join('../', self.exps_folder_name, self.expname)
+            utils.mkdir_ifnotexists(os.path.join(self.data_root,self.exps_folder_name))
+            self.expdir = os.path.join(self.data_root, self.exps_folder_name, self.expname)
             utils.mkdir_ifnotexists(self.expdir)
             self.timestamp = '{:%Y_%m_%d_%H_%M_%S}'.format(datetime.now())
             utils.mkdir_ifnotexists(os.path.join(self.expdir))
@@ -83,6 +84,7 @@ class MonoSDFTrainRunner():
         if kwargs['scan_id'] is not None:
             dataset_conf['scan_id'] = kwargs['scan_id']
         dataset_conf['full'] = kwargs['full']
+        dataset_conf['data_root'] = kwargs['data_root']
 
         self.train_dataset = utils.get_class(self.conf.get_string('train.dataset_class'))(**dataset_conf)
 

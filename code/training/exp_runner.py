@@ -17,7 +17,7 @@ if __name__ == '__main__':
     parser.add_argument('--nepoch', type=int, default=2000, help='number of epochs to train for')
     parser.add_argument('--conf', type=str, default='./confs/eth3d_highres_mlp.conf')
     parser.add_argument('--expname', type=str, default='')
-    parser.add_argument("--exps_folder", type=str, default="exps")
+    parser.add_argument("--exps_folder", type=str, default="monosdf_eth3d")
     #parser.add_argument('--gpu', type=str, default='auto', help='GPU to use [default: GPU auto]')
     parser.add_argument('--is_continue', default=False, action="store_true",
                         help='If set, indicates continuing from a previous run.')
@@ -30,6 +30,7 @@ if __name__ == '__main__':
                         help='If set, cancel visualization in intermediate epochs.')
     parser.add_argument("--local_rank", type=int, default=0, help='local rank for DistributedDataParallel')
     parser.add_argument("--full", type=eval, default=True, choices=[True, False], help='whether use full scene for training')
+    parser.add_argument("--data_root", type=str, default='../../data/vision-xx', help='the data root for the cluster:../../data/vision-xx')
 
     opt = parser.parse_args()
 
@@ -69,7 +70,8 @@ if __name__ == '__main__':
                                     checkpoint=opt.checkpoint,
                                     scan_id=opt.scan_id,
                                     do_vis=not opt.cancel_vis,
-                                    full=opt.full
+                                    full=opt.full,
+                                    data_root = opt.data_root
                                     )
 
     trainrunner.run()

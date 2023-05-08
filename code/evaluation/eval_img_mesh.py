@@ -133,8 +133,9 @@ def main(args):
     (output_path / 'results').mkdir(exist_ok=True, parents=True)
     pc_file = output_path / 'results' / 'fused.ply'
 
-    fuse_reconstruction(str(output_path), pc_file,
-                        args.threshold, args.min_views, args.device)
+    # We do this for monosdf
+    # fuse_reconstruction(str(output_path), pc_file,
+    #                     args.threshold, args.min_views, args.device)
 
     # evaluate images for test samples
     evals_images = evaluate_images(input_path, output_path)

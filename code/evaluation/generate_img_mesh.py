@@ -97,6 +97,8 @@ def evaluate(**kwargs):
     
     # use all images for evaluation
     dataset_conf['num_views'] = -1
+    data_root = kwargs['data_root']
+    dataset_conf['data_root'] = data_root
 
     eval_dataset = utils.get_class(conf.get_string('train.dataset_class'))(**dataset_conf)
 
@@ -145,7 +147,7 @@ def evaluate(**kwargs):
             utils.mkdir_ifnotexists(results_folder_name)
             mesh_path = '{0}/{1}_mesh.ply'.format(results_folder_name, scan_id)
 
-            instance_dir = os.path.join('../data/eth3d', f'{scan_id}')
+            instance_dir = os.path.join(data_root, 'eth3d_processed_monosdf', f'{scan_id}')
             # Transform to world coordWinates
             # First load true scale matrix
             transform_path = os.path.join(instance_dir, 'transforms.json')
@@ -235,6 +237,7 @@ if __name__ == '__main__':
     parser.add_argument('--generate_image', default=True, type = eval, choices=[True, False], help='Whether generate image.')
     parser.add_argument('--generate_mesh', default=True, type = eval, choices=[True, False], help='Whether generate mesh.')
     parser.add_argument('--downsample_density', default=0.1, type=float, help='Downsample density for mesh generation')
+    parser.add_argument("--data_root", type=str, default='../../data/vision-xx', help='the data root for the cluster:../../data/vision-xx')
 
     opt = parser.parse_args()
 
