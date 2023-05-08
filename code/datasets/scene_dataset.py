@@ -7,6 +7,7 @@ import utils.general as utils
 from utils import rend_util
 from glob import glob
 import cv2
+import json
 import random
 from pathlib import Path
 from PIL import Image
@@ -140,7 +141,8 @@ class SceneDatasetDN(torch.utils.data.Dataset):
                  scan_id=None,
                  center_crop_type='xxxx',
                  use_mask=False,
-                 num_views=-1
+                 num_views=-1,
+                 full=True,
                  ):
 
         self.instance_dir = os.path.join('../data', data_dir, f'{scan_id}')
@@ -159,28 +161,37 @@ class SceneDatasetDN(torch.utils.data.Dataset):
             data_paths.extend(glob(data_dir))
             data_paths = sorted(data_paths)
             return data_paths
-    
-        image_dir = Path('{0}/images'.format(self.instance_dir))
-        image_paths = [i for i in sorted(image_dir.iterdir()) if (i.name[:7] != 'dynamic')]
 
-        depth_dir = Path('{0}/depths'.format(self.instance_dir))
-        depth_paths = sorted(depth_dir.iterdir())
+        self.full = full
+        if self.full:
+            self.cam_file = '{0}/cameras.npz'.format(self.instance_dir)
+            transform_path = '{0}/transforms.json'.format(self.instance_dir)
+        else:
+            self.cam_file = '{0}/cameras_train.npz'.format(self.instance_dir)
+            transform_path = '{0}/transforms_train.json'.format(self.instance_dir)
 
-        normal_dir = Path('{0}/normals'.format(self.instance_dir))
-        normal_paths = sorted(normal_dir.iterdir())
+        image_paths, depth_paths, normal_paths = self.load_paths(transform_path)
+        # image_dir = Path('{0}/images'.format(self.instance_dir))
+        # image_paths = [i for i in sorted(image_dir.iterdir()) if (i.name[:7] != 'dynamic')]
+
+        # depth_dir = Path('{0}/depths'.format(self.instance_dir))
+        # depth_paths = sorted(depth_dir.iterdir())
+
+        # normal_dir = Path('{0}/normals'.format(self.instance_dir))
+        # normal_paths = sorted(normal_dir.iterdir())
         
+        self.n_images = len(image_paths)
+        
+        # self.cam_file = '{0}/cameras.npz'.format(self.instance_dir)
+        camera_dict = np.load(self.cam_file)
+        scale_mats = [camera_dict['scale_mat_%d' % idx].astype(np.float32) for idx in range(self.n_images)]
+        world_mats = [camera_dict['world_mat_%d' % idx].astype(np.float32) for idx in range(self.n_images)]
+
         # mask is only used in the replica dataset as some monocular depth predictions have very large error and we ignore it
         if use_mask:
             mask_paths = glob_data(os.path.join('{0}'.format(self.instance_dir), "*_mask.npy"))
         else:
             mask_paths = None
-
-        self.n_images = len(image_paths)
-        
-        self.cam_file = '{0}/cameras.npz'.format(self.instance_dir)
-        camera_dict = np.load(self.cam_file)
-        scale_mats = [camera_dict['scale_mat_%d' % idx].astype(np.float32) for idx in range(self.n_images)]
-        world_mats = [camera_dict['world_mat_%d' % idx].astype(np.float32) for idx in range(self.n_images)]
 
         self.intrinsics_all = []
         self.pose_all = []
@@ -320,3 +331,25 @@ class SceneDatasetDN(torch.utils.data.Dataset):
 
     def get_scale_mat(self):
         return np.load(self.cam_file)['scale_mat_0']
+
+    def load_paths(self, transform_path):
+        with open(transform_path, 'r') as f:
+            transforms = json.load(f)
+
+        frames = transforms['frames']
+        image_paths = []
+        depth_paths = []
+        normal_paths = []
+
+        for frame in frames:
+            image_filename = frame['file_path']
+            if not image_filename.endswith('.png') or image_filename.endswith('.jpg'):
+                image_filename = image_filename + '.png'
+            image_file = os.path.join(self.instance_dir, image_filename)
+            depth_file = os.path.join(self.instance_dir, frame["depth_path"])
+            normal_file = os.path.join(self.instance_dir, frame["normal_path"])
+            image_paths.append(image_file)
+            depth_paths.append(depth_file)
+            normal_paths.append(normal_file)
+
+        return image_paths, depth_paths, normal_paths

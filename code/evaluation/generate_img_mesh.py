@@ -12,6 +12,8 @@ import open3d as o3d
 import json
 import multiprocessing as mp
 
+from pyntcloud import PyntCloud
+import pandas as pd
 import utils.general as utils
 import utils.plots as plt
 from utils import rend_util
@@ -35,7 +37,16 @@ def generate_pc_from_mesh(scan_id, mesh_path, pc_path, thresh):
     data_mesh = o3d.io.read_triangle_mesh(mesh_path)
 
     sampled_pc = data_mesh.sample_points_poisson_disk(number_of_points = 2000000, )
-    o3d.io.write_point_cloud(pc_path, sampled_pc)
+    np_points = np.asarray(sampled_pc.points).astype(np.float32)
+
+    pointdata = pd.DataFrame({
+        'x': np_points[:, 0],
+        'y': np_points[:, 1],
+        'z': np_points[:, 2]
+    })
+    pointcloud = PyntCloud(pointdata)
+    pointcloud.to_file(str(pc_path))
+    # o3d.io.write_point_cloud(pc_path, sampled_pc)
 
     # vertices = np.asarray(data_mesh.vertices)
     # triangles = np.asarray(data_mesh.triangles)
@@ -155,7 +166,7 @@ def evaluate(**kwargs):
 
         # Cull point cloud from mesh
         # cull_scan(scan, mesh_path, result_mesh_file)
-        pc_path = '{0}/{1}.ply'.format(results_folder_name, scan_id)
+        pc_path = '{0}/fused.ply'.format(results_folder_name)
         # cull_scan(scan_id, mesh_path, pc_path)
         generate_pc_from_mesh(scan_id, mesh_path, pc_path, thresh)
 
