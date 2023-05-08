@@ -54,13 +54,13 @@ class MonoSDFTrainRunner():
             self.expdir = os.path.join('../', self.exps_folder_name, self.expname)
             utils.mkdir_ifnotexists(self.expdir)
             self.timestamp = '{:%Y_%m_%d_%H_%M_%S}'.format(datetime.now())
-            utils.mkdir_ifnotexists(os.path.join(self.expdir, self.timestamp))
+            utils.mkdir_ifnotexists(os.path.join(self.expdir))
 
-            self.plots_dir = os.path.join(self.expdir, self.timestamp, 'plots')
+            self.plots_dir = os.path.join(self.expdir, 'plots')
             utils.mkdir_ifnotexists(self.plots_dir)
 
             # create checkpoints dirs
-            self.checkpoints_path = os.path.join(self.expdir, self.timestamp, 'checkpoints')
+            self.checkpoints_path = os.path.join(self.expdir, 'checkpoints')
             utils.mkdir_ifnotexists(self.checkpoints_path)
             self.model_params_subdir = "ModelParameters"
             self.optimizer_params_subdir = "OptimizerParameters"
@@ -70,7 +70,7 @@ class MonoSDFTrainRunner():
             utils.mkdir_ifnotexists(os.path.join(self.checkpoints_path, self.optimizer_params_subdir))
             utils.mkdir_ifnotexists(os.path.join(self.checkpoints_path, self.scheduler_params_subdir))
 
-            os.system("""cp -r {0} "{1}" """.format(kwargs['conf'], os.path.join(self.expdir, self.timestamp, 'runconf.conf')))
+            os.system("""cp -r {0} "{1}" """.format(kwargs['conf'], os.path.join(self.expdir, 'runconf.conf')))
 
         # if (not self.GPU_INDEX == 'ignore'):
         #     os.environ["CUDA_VISIBLE_DEVICES"] = '{0}'.format(self.GPU_INDEX)
