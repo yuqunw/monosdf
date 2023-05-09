@@ -18,6 +18,7 @@ mkdir -p $CHECKPOINT_DIR
 rm -r "${CHECKPOINT_DIR}/${scene}"
 
 cd /home/yuqunwu2/large_scale_nerf/monosdf/code
+
 python training/exp_runner.py --scan_id ${scene} \
                               --full ${with_full} \
                               --expname ${scene} \
@@ -30,9 +31,9 @@ python evaluation/generate_img_mesh.py --checkpoint "${MOUNT_DIR}/${run_name}/${
                                        --scan_id ${scene} \
                                        --data_root ${MOUNT_DIR}
 
-python scripts/report.py --input_path "${DATA_DIR}/${scene}" \
-                         --output_path "${CHECKPOINT_DIR}/${scene}/output" \
-                         --gt_path "${GT_DIR}/${scene}" 
+# python evaluation/evaluate_single_scene.py --input_path "${DATA_DIR}/${scene}" \
+#                          --output_path "${CHECKPOINT_DIR}/${scene}/output" \
+#                          --gt_path "${GT_DIR}/${scene}" 
 
 cd ${CHECKPOINT_DIR}/${scene}/
 zip -r "${scene}.zip" "output"

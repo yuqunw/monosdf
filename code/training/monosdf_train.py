@@ -29,10 +29,10 @@ class MonoSDFTrainRunner():
         self.GPU_INDEX = kwargs['gpu_index']
 
         self.data_root = kwargs['data_root']
-        self.expname = self.conf.get_string('train.expname') + kwargs['expname']
+        self.expname = kwargs['expname']
         scan_id = kwargs['scan_id'] if kwargs['scan_id'] is not None else self.conf.get_int('dataset.scan_id', default=-1)
         if scan_id != -1:
-            self.expname = self.expname + '_{0}'.format(scan_id)
+            self.expname = self.expname
 
         if kwargs['is_continue'] and kwargs['timestamp'] == 'latest':
             if os.path.exists(os.path.join(self.data_root, kwargs['exps_folder_name'], self.expname)):
@@ -194,6 +194,7 @@ class MonoSDFTrainRunner():
         if self.GPU_INDEX == 0 :
             self.writer = SummaryWriter(log_dir=os.path.join(self.plots_dir, 'logs'))
 
+        start_time =time.time()
         self.iter_step = 0
         for epoch in range(self.start_epoch, self.nepochs + 1):
 
@@ -255,18 +256,32 @@ class MonoSDFTrainRunner():
                 
                 psnr = rend_util.get_psnr(model_outputs['rgb_values'],
                                           ground_truth['rgb'].cuda().reshape(-1,3))
-                
+
+
+                if (self.iter_step % 1000) == 0:
+                    curr_time = time.time()
+                    time_taken = curr_time - start_time
+                    time_per_step = time_taken / (self.iter_step)
+                    time_left = time_per_step * (self.max_total_iters - self.iter_step)
+                    minutes_left = int(time_left // 60)
+                    hour = int(minutes_left // 60)
+                    second = int(time_left % 60)
+                    minute = int(minutes_left % 60)
+                    print(f'Trained step {self.iter_step} / {self.max_total_iters} (eta {hour:02d}:{minute:02d}:{second:02d})', flush=True)
+
+
                 self.iter_step += 1                
-                
+
+
                 if self.GPU_INDEX == 0:
-                    print(
-                        '{0}_{1} [{2}] ({3}/{4}): loss = {5}, rgb_loss = {6}, eikonal_loss = {7}, psnr = {8}, bete={9}, alpha={10}'
-                            .format(self.expname, self.timestamp, epoch, data_index, self.n_batches, loss.item(),
-                                    loss_output['rgb_loss'].item(),
-                                    loss_output['eikonal_loss'].item(),
-                                    psnr.item(),
-                                    self.model.density.get_beta().item(),
-                                    1. / self.model.density.get_beta().item()))
+                    # print(
+                    #     '{0}_{1} [{2}] ({3}/{4}): loss = {5}, rgb_loss = {6}, eikonal_loss = {7}, psnr = {8}, bete={9}, alpha={10}'
+                    #         .format(self.expname, self.timestamp, epoch, data_index, self.n_batches, loss.item(),
+                    #                 loss_output['rgb_loss'].item(),
+                    #                 loss_output['eikonal_loss'].item(),
+                    #                 psnr.item(),
+                    #                 self.model.density.get_beta().item(),
+                    #                 1. / self.model.density.get_beta().item()))
                     
                     self.writer.add_scalar('Loss/loss', loss.item(), self.iter_step)
                     self.writer.add_scalar('Loss/color_loss', loss_output['rgb_loss'].item(), self.iter_step)

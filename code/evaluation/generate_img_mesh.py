@@ -8,7 +8,7 @@ import numpy as np
 from PIL import Image
 from tqdm import tqdm
 import pandas as pd
-import open3d as o3d
+# import open3d as o3d
 import json
 import multiprocessing as mp
 
@@ -36,7 +36,7 @@ def generate_pc_from_mesh(scan_id, mesh_path, pc_path, thresh):
     pbar.set_description('read data mesh')
     data_mesh = o3d.io.read_triangle_mesh(mesh_path)
 
-    sampled_pc = data_mesh.sample_points_poisson_disk(number_of_points = 2000000, )
+    sampled_pc = data_mesh.sample_points_poisson_disk(number_of_points = 2_000_000, )
     np_points = np.asarray(sampled_pc.points).astype(np.float32)
 
     pointdata = pd.DataFrame({
@@ -170,7 +170,7 @@ def evaluate(**kwargs):
         # cull_scan(scan, mesh_path, result_mesh_file)
         pc_path = '{0}/fused.ply'.format(results_folder_name)
         # cull_scan(scan_id, mesh_path, pc_path)
-        generate_pc_from_mesh(scan_id, mesh_path, pc_path, thresh)
+        # generate_pc_from_mesh(scan_id, mesh_path, pc_path, thresh)
 
     if generate_image:
         print("Generating image...")
@@ -249,5 +249,6 @@ if __name__ == '__main__':
              world_space=opt.world_space,
              generate_image=opt.generate_image,
              generate_mesh=opt.generate_mesh,
-             thresh = opt.downsample_density
+             thresh = opt.downsample_density,
+             data_root = opt.data_root
              )
