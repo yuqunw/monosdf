@@ -6,6 +6,7 @@ import sys
 import torch
 from tqdm import tqdm
 import numpy as np
+import time
 
 import utils.general as utils
 import utils.plots as plt
@@ -257,20 +258,18 @@ class MonoSDFTrainRunner():
                 psnr = rend_util.get_psnr(model_outputs['rgb_values'],
                                           ground_truth['rgb'].cuda().reshape(-1,3))
 
+                self.iter_step += 1                
 
                 if (self.iter_step % 1000) == 0:
                     curr_time = time.time()
                     time_taken = curr_time - start_time
-                    time_per_step = time_taken / (self.iter_step)
+                    time_per_step = time_taken / (self.iter_step + 1)
                     time_left = time_per_step * (self.max_total_iters - self.iter_step)
                     minutes_left = int(time_left // 60)
                     hour = int(minutes_left // 60)
                     second = int(time_left % 60)
                     minute = int(minutes_left % 60)
-                    print(f'Trained step {self.iter_step} / {self.max_total_iters} (eta {hour:02d}:{minute:02d}:{second:02d})', flush=True)
-
-
-                self.iter_step += 1                
+                    print(f'Trained step {self.iter_step} / {self.max_total_iters} (eta {hour:02d}:{minute:02d}:{second:02d})', flush=True)                
 
 
                 if self.GPU_INDEX == 0:
