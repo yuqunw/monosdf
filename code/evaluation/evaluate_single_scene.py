@@ -7,6 +7,7 @@ import os
 import glob
 from skimage.morphology import binary_dilation, disk
 import argparse
+import json
 
 import trimesh
 from pathlib import Path
@@ -20,9 +21,11 @@ from utils import rend_util
 def cull_scan(scan, mesh_path, result_mesh_file):
     
     # load poses
-    instance_dir = os.path.join('../data/DTU', 'scan{0}'.format(scan))
-    image_dir = '{0}/image'.format(instance_dir)
-    image_paths = sorted(glob.glob(os.path.join(image_dir, "*.png")))
+    instance_dir = os.path.join('../data/eth3d', f'{scan}')
+    image_dir = Path('{0}/images'.format(instance_dir))
+    image_paths = [i for i in sorted(image_dir.iterdir()) if (i.name[:7] != 'dynamic')]
+    # image_dir = '{0}/image'.format(instance_dir)
+    # image_paths = sorted(glob.glob(os.path.join(image_dir, "*.png")))
     n_images = len(image_paths)
     
     cam_file = '{0}/cameras.npz'.format(instance_dir)
@@ -48,7 +51,7 @@ def cull_scan(scan, mesh_path, result_mesh_file):
         masks.append(mask)
 
     # hard-coded image shape
-    W, H = 1600, 1200
+    W, H = 960, 640
 
     # load mesh
     mesh = trimesh.load(mesh_path)
@@ -77,7 +80,8 @@ def cull_scan(scan, mesh_path, result_mesh_file):
             valid = ((pix_coords > -1. ) & (pix_coords < 1.)).all(dim=-1).float()
             
             # dialate mask similar to unisurf
-            maski = masks[i][:, :, 0].astype(np.float32) / 256.
+            # masks[i][:, :, 0].astype(np.float32) / 256.
+            maski = np.ones((H, W)).astype(np.float32)
             
             maski = torch.from_numpy(binary_dilation(maski, disk(12))).float()[None, None].cuda()
             
@@ -99,6 +103,23 @@ def cull_scan(scan, mesh_path, result_mesh_file):
     # transform vertices to world 
     scale_mat = scale_mats[0]
     mesh.vertices = mesh.vertices * scale_mat[0, 0] + scale_mat[:3, 3][None]
+    
+    # Transform to world coordWinates
+    # First load true scale matrix
+    transform_path = os.path.join(instance_dir, 'transforms.json')
+    with open(transform_path, 'r') as f:
+        transforms = json.load(f)
+    center = torch.Tensor(transforms['pose_offset']).view(3)
+    scale = transforms['pose_scale']      
+    true_scale_mat = np.eye(4).astype(np.float32)
+    true_scale_mat[:3, 3] = -center
+    true_scale_mat[:3 ] *= scale 
+
+    # Get the inverse of the true scale matrix, following monosdf definition
+    inv_true_scale_mat = np.linalg.inv(true_scale_mat)
+
+    # Apply the inverse of the true scale matrix to the mesh
+    mesh.apply_transform(inv_true_scale_mat)
     mesh.export(result_mesh_file)
     del mesh
     
@@ -127,5 +148,5 @@ if __name__ == "__main__":
 
     cull_scan(scan, ply_file, result_mesh_file)
 
-    cmd = f"python eval.py --data {result_mesh_file} --scan {scan} --mode mesh --dataset_dir {Offical_DTU_Dataset} --vis_out_dir {out_dir}"
-    os.system(cmd)
+    # cmd = f"python eval.py --data {result_mesh_file} --scan {scan} --mode mesh --dataset_dir {Offical_DTU_Dataset} --vis_out_dir {out_dir}"
+    # os.system(cmd)

@@ -44,4 +44,3 @@ ssh jyl "mkdir -p /mnt/data1/eth3d_outputs/${result_dirname}/${run_name}/${scene
 scp "${scene}.zip" jyl:/mnt/data1/cluster_results/${result_dirname}/${run_name}/
 ssh jyl "cd /mnt/data1/cluster_results/${result_dirname}/${run_name}/ && unzip ${scene}.zip -d /mnt/data1/eth3d_outputs/${result_dirname}/${run_name}/${scene}"
 
-
