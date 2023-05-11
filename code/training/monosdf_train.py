@@ -29,7 +29,7 @@ class MonoSDFTrainRunner():
         self.GPU_INDEX = kwargs['gpu_index']
 
         self.expname = self.conf.get_string('train.expname') + kwargs['expname']
-        scan_id = kwargs['scan_id'] if kwargs['scan_id'] != -1 else self.conf.get_int('dataset.scan_id', default=-1)
+        scan_id = kwargs['scan_id'] if kwargs['scan_id'] is not None else self.conf.get_int('dataset.scan_id', default=-1)
         if scan_id != -1:
             self.expname = self.expname + '_{0}'.format(scan_id)
 
@@ -54,13 +54,13 @@ class MonoSDFTrainRunner():
             self.expdir = os.path.join('../', self.exps_folder_name, self.expname)
             utils.mkdir_ifnotexists(self.expdir)
             self.timestamp = '{:%Y_%m_%d_%H_%M_%S}'.format(datetime.now())
-            utils.mkdir_ifnotexists(os.path.join(self.expdir, self.timestamp))
+            utils.mkdir_ifnotexists(os.path.join(self.expdir))
 
-            self.plots_dir = os.path.join(self.expdir, self.timestamp, 'plots')
+            self.plots_dir = os.path.join(self.expdir, 'plots')
             utils.mkdir_ifnotexists(self.plots_dir)
 
             # create checkpoints dirs
-            self.checkpoints_path = os.path.join(self.expdir, self.timestamp, 'checkpoints')
+            self.checkpoints_path = os.path.join(self.expdir, 'checkpoints')
             utils.mkdir_ifnotexists(self.checkpoints_path)
             self.model_params_subdir = "ModelParameters"
             self.optimizer_params_subdir = "OptimizerParameters"
@@ -70,7 +70,7 @@ class MonoSDFTrainRunner():
             utils.mkdir_ifnotexists(os.path.join(self.checkpoints_path, self.optimizer_params_subdir))
             utils.mkdir_ifnotexists(os.path.join(self.checkpoints_path, self.scheduler_params_subdir))
 
-            os.system("""cp -r {0} "{1}" """.format(kwargs['conf'], os.path.join(self.expdir, self.timestamp, 'runconf.conf')))
+            os.system("""cp -r {0} "{1}" """.format(kwargs['conf'], os.path.join(self.expdir, 'runconf.conf')))
 
         # if (not self.GPU_INDEX == 'ignore'):
         #     os.environ["CUDA_VISIBLE_DEVICES"] = '{0}'.format(self.GPU_INDEX)
@@ -80,18 +80,18 @@ class MonoSDFTrainRunner():
         print('Loading data ...')
 
         dataset_conf = self.conf.get_config('dataset')
-        if kwargs['scan_id'] != -1:
+        if kwargs['scan_id'] is not None:
             dataset_conf['scan_id'] = kwargs['scan_id']
+        dataset_conf['full'] = kwargs['full']
 
         self.train_dataset = utils.get_class(self.conf.get_string('train.dataset_class'))(**dataset_conf)
 
         self.max_total_iters = self.conf.get_int('train.max_total_iters', default=200000)
         self.ds_len = len(self.train_dataset)
         print('Finish loading data. Data-set size: {0}'.format(self.ds_len))
-        if scan_id < 24 and scan_id > 0: # BlendedMVS, running for 200k iterations
-            self.nepochs = int(self.max_total_iters / self.ds_len)
-            print('RUNNING FOR {0}'.format(self.nepochs))
-
+        # if scan_id < 24 and scan_id > 0: # BlendedMVS, running for 200k iterations
+        self.nepochs = int(self.max_total_iters / self.ds_len)
+        print('RUNNING FOR {0}'.format(self.nepochs))
         self.train_dataloader = torch.utils.data.DataLoader(self.train_dataset,
                                                             batch_size=self.batch_size,
                                                             shuffle=True,
@@ -133,7 +133,7 @@ class MonoSDFTrainRunner():
         decay_steps = self.nepochs * len(self.train_dataset)
         self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, decay_rate ** (1./decay_steps))
 
-        self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[self.GPU_INDEX], broadcast_buffers=False, find_unused_parameters=True)
+        # self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[self.GPU_INDEX], broadcast_buffers=False, find_unused_parameters=True)
         
         self.do_vis = kwargs['do_vis']
 
@@ -194,10 +194,10 @@ class MonoSDFTrainRunner():
         self.iter_step = 0
         for epoch in range(self.start_epoch, self.nepochs + 1):
 
-            if self.GPU_INDEX == 0 and epoch % self.checkpoint_freq == 0:
+            if self.GPU_INDEX == 0 and self.do_vis and epoch % self.plot_freq == 0 and epoch != 0:
                 self.save_checkpoints(epoch)
 
-            if self.GPU_INDEX == 0 and self.do_vis and epoch % self.plot_freq == 0:
+            if self.GPU_INDEX == 0 and self.do_vis and epoch % self.plot_freq == 0 and epoch != 0:
                 self.model.eval()
 
                 self.train_dataset.change_sampling_idx(-1)
@@ -224,7 +224,7 @@ class MonoSDFTrainRunner():
                 model_outputs = utils.merge_output(res, self.total_pixels, batch_size)
                 plot_data = self.get_plot_data(model_input, model_outputs, model_input['pose'], ground_truth['rgb'], ground_truth['normal'], ground_truth['depth'])
 
-                plt.plot(self.model.module.implicit_network,
+                plt.plot(self.model.implicit_network,
                         indices,
                         plot_data,
                         self.plots_dir,
@@ -262,8 +262,8 @@ class MonoSDFTrainRunner():
                                     loss_output['rgb_loss'].item(),
                                     loss_output['eikonal_loss'].item(),
                                     psnr.item(),
-                                    self.model.module.density.get_beta().item(),
-                                    1. / self.model.module.density.get_beta().item()))
+                                    self.model.density.get_beta().item(),
+                                    1. / self.model.density.get_beta().item()))
                     
                     self.writer.add_scalar('Loss/loss', loss.item(), self.iter_step)
                     self.writer.add_scalar('Loss/color_loss', loss_output['rgb_loss'].item(), self.iter_step)
@@ -273,8 +273,8 @@ class MonoSDFTrainRunner():
                     self.writer.add_scalar('Loss/normal_l1_loss', loss_output['normal_l1'].item(), self.iter_step)
                     self.writer.add_scalar('Loss/normal_cos_loss', loss_output['normal_cos'].item(), self.iter_step)
                     
-                    self.writer.add_scalar('Statistics/beta', self.model.module.density.get_beta().item(), self.iter_step)
-                    self.writer.add_scalar('Statistics/alpha', 1. / self.model.module.density.get_beta().item(), self.iter_step)
+                    self.writer.add_scalar('Statistics/beta', self.model.density.get_beta().item(), self.iter_step)
+                    self.writer.add_scalar('Statistics/alpha', 1. / self.model.density.get_beta().item(), self.iter_step)
                     self.writer.add_scalar('Statistics/psnr', psnr.item(), self.iter_step)
                     
                     if self.Grid_MLP:
