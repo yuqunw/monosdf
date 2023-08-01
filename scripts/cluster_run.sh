@@ -1,5 +1,5 @@
 #!/bin/bash
-run_name="monosdf_eth3d"
+run_name="monosdf_eth3d_001"
 echo "Args provided: $1 $2"
 scene=$1
 if [[ $2 == "--with_full" ]]; then
@@ -17,7 +17,7 @@ CHECKPOINT_DIR="${MOUNT_DIR}/${run_name}"
 mkdir -p $CHECKPOINT_DIR
 rm -r "${CHECKPOINT_DIR}/${scene}"
 
-cd /home/lee896/monosdf/code
+cd /home/lee896/monosdf-x/code
 
 python training/exp_runner.py --scan_id ${scene} \
                               --full ${with_full} \
