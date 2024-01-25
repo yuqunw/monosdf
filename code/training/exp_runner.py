@@ -60,9 +60,9 @@ if __name__ == '__main__':
     # torch.distributed.barrier()
     
     if opt.scan_id in ['Barn', 'Courthouse']:
-        opt.conf = './confs/tnt_highres_mlp_outside_in.conf'
+        opt.conf = './confs/tnt_highres_grids_outside_in.conf'
     else:
-        opt.conf = './confs/tnt_highres_mlp_inside_out.conf'
+        opt.conf = './confs/tnt_highres_grids_inside_out.conf'
         
     trainrunner = MonoSDFTrainRunner(conf=opt.conf,
                                     batch_size=opt.batch_size,
