@@ -194,7 +194,8 @@ class SceneDatasetDN(torch.utils.data.Dataset):
 
         # mask is only used in the replica dataset as some monocular depth predictions have very large error and we ignore it
         if use_mask:
-            mask_paths = glob_data(os.path.join('{0}'.format(self.instance_dir), "*_mask.npy"))
+            # mask_paths = glob_data(os.path.join('{0}'.format(self.instance_dir), "*_mask.npy"))
+            mask_paths = self.load_mask_path(transform_path)
         else:
             mask_paths = None
 
@@ -270,8 +271,10 @@ class SceneDatasetDN(torch.utils.data.Dataset):
                 self.mask_images.append(mask)
         else:
             for path in mask_paths:
-                mask = np.load(path)
-                self.mask_images.append(torch.from_numpy(mask.reshape(-1, 1)).float())
+                with Image.open(path) as img:
+                    mask = 1 - TF.to_tensor(img)
+                # mask = np.load(path)
+                self.mask_images.append(mask[0].reshape(-1, 1).float())
 
     def __len__(self):
         return self.n_images
@@ -358,3 +361,20 @@ class SceneDatasetDN(torch.utils.data.Dataset):
             normal_paths.append(normal_file)
 
         return image_paths, depth_paths, normal_paths
+    
+    def load_mask_path(self, transform_path):
+        with open(transform_path, 'r') as f:
+            transforms = json.load(f)
+
+        frames = transforms['frames']
+        mask_paths = []
+
+        for frame in frames:
+            mask_filename = frame['mask_file_path']
+            if not mask_filename.endswith('.png'):
+                mask_filename = mask_filename + '.png'
+            mask_file = os.path.join(self.instance_dir, mask_filename)
+            mask_paths.append(mask_file)
+
+        return mask_paths
+    

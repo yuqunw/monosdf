@@ -1,5 +1,5 @@
 #!/bin/bash
-run_name="monosdf_eth3d_smaller_bias"
+run_name="monosdf_tnt_bias"
 echo "Args provided: $1 $2"
 scene=$1
 if [[ $2 == "--with_full" ]]; then
@@ -39,8 +39,8 @@ cd ${CHECKPOINT_DIR}/${scene}/
 zip -r "${scene}.zip" "output"
 
 result_dirname="ablations"
-ssh jae "mkdir -p /mnt/data1/cluster_results/${result_dirname}/${run_name}"
-ssh jae "mkdir -p /mnt/data1/eth3d_outputs/${result_dirname}/${run_name}/${scene}"
-scp "${scene}.zip" jae:/mnt/data1/cluster_results/${result_dirname}/${run_name}/
-ssh jae "cd /mnt/data1/cluster_results/${result_dirname}/${run_name}/ && unzip ${scene}.zip -d /mnt/data1/eth3d_outputs/${result_dirname}/${run_name}/${scene}"
+ssh yuqun "mkdir -p /mnt/data/cluster_results/${result_dirname}/${run_name}"
+ssh yuqun "mkdir -p /mnt/data/tnt_outputs/${result_dirname}/${run_name}/${scene}"
+scp "${scene}.zip" yuqun:/mnt/data/cluster_results/${result_dirname}/${run_name}/
+ssh yuqun "cd /mnt/data/cluster_results/${result_dirname}/${run_name}/ && unzip ${scene}.zip -d /mnt/data/tnt_outputs/${result_dirname}/${run_name}/${scene}"
 

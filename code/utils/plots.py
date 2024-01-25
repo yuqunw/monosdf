@@ -33,13 +33,13 @@ def plot(implicit_network, indices, plot_data, path, epoch, img_res, plot_nimgs,
         images = np.concatenate(images, axis=1)
         cv2.imwrite('{0}/merge_{1}_{2}.png'.format(path, epoch, indices[0]), images)
 
-    surface_traces = get_surface_sliding(path=path,
-                                         epoch=epoch,
-                                         sdf=lambda x: implicit_network(x)[:, 0],
-                                         resolution=resolution,
-                                         grid_boundary=grid_boundary,
-                                         level=level
-                                         )
+    # surface_traces = get_surface_sliding(path=path,
+    #                                      epoch=epoch,
+    #                                      sdf=lambda x: implicit_network(x)[:, 0],
+    #                                      resolution=resolution,
+    #                                      grid_boundary=grid_boundary,
+    #                                      level=level
+    #                                      )
 
 avg_pool_3d = torch.nn.AvgPool3d(2, stride=2)
 upsample = torch.nn.Upsample(scale_factor=2, mode='nearest')

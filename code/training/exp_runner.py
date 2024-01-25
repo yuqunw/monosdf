@@ -1,6 +1,7 @@
 import sys
 
 sys.path.append('../code')
+# sys.path.remove('/home/zhenglinyu2/anaconda3/envs/monosdf/lib/python3.7/site-packages')
 import argparse
 import torch
 torch.backends.cudnn.enabled = True
@@ -15,7 +16,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, default=1, help='input batch size')
     parser.add_argument('--nepoch', type=int, default=2000, help='number of epochs to train for')
-    parser.add_argument('--conf', type=str, default='./confs/eth3d_highres_mlp.conf')
+    parser.add_argument('--conf', type=str, default='./confs/tnt_highres_mlp.conf')
     parser.add_argument('--expname', type=str, default='')
     parser.add_argument("--exps_folder", type=str, default="monosdf_eth3d")
     #parser.add_argument('--gpu', type=str, default='auto', help='GPU to use [default: GPU auto]')
@@ -57,8 +58,12 @@ if __name__ == '__main__':
     torch.cuda.set_device(opt.local_rank)
     # torch.distributed.init_process_group(backend='nccl', init_method='env://', world_size=world_size, rank=rank, timeout=datetime.timedelta(1, 1800))
     # torch.distributed.barrier()
-
-
+    
+    if opt.scan_id in ['Barn', 'Courthouse']:
+        opt.conf = './confs/tnt_highres_mlp_outside_in.conf'
+    else:
+        opt.conf = './confs/tnt_highres_mlp_inside_out.conf'
+        
     trainrunner = MonoSDFTrainRunner(conf=opt.conf,
                                     batch_size=opt.batch_size,
                                     nepochs=opt.nepoch,
