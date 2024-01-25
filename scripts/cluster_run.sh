@@ -1,5 +1,5 @@
 #!/bin/bash
-run_name="monosdf_eth3d"
+run_name="monosdf_eth3d_smaller_bias"
 echo "Args provided: $1 $2"
 scene=$1
 if [[ $2 == "--with_full" ]]; then
